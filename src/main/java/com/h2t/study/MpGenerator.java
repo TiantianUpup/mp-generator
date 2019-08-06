@@ -1,19 +1,12 @@
 package com.h2t.study;
 
-import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
-import com.baomidou.mybatisplus.core.toolkit.StringPool;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
 import com.baomidou.mybatisplus.generator.InjectionConfig;
 import com.baomidou.mybatisplus.generator.config.*;
-import com.baomidou.mybatisplus.generator.config.po.TableInfo;
+import com.baomidou.mybatisplus.generator.config.converts.MySqlTypeConvert;
+import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
-import org.springframework.beans.factory.annotation.Value;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
 
 /**
  * 代码生成器
@@ -53,7 +46,36 @@ public class MpGenerator {
     public static void main(String[] args) {
         // 代码生成器
         AutoGenerator mpg = new AutoGenerator();
+        mpg.setGlobalConfig(buildGlobalConfig());
+        // 数据源配置
+        mpg.setDataSource(buildDataSourceConfig());
+        // 包配置
+        mpg.setPackageInfo(buildPackageConfig());
+        // 自定义配置
+        InjectionConfig cfg = new InjectionConfig() {
+            @Override
+            public void initMap() {
+                // to do nothing
+            }
+        };
+        mpg.setCfg(cfg);
+        // 配置模板
+        TemplateConfig templateConfig = new TemplateConfig();
+        //不生成mapper xml文件
+        //templateConfig.setXml(null);
+        mpg.setTemplate(templateConfig);
+        // 策略配置
+        mpg.setStrategy(buildStrategyConfig());
+        mpg.setTemplateEngine(new FreemarkerTemplateEngine());
+        mpg.execute();
+    }
 
+    /**
+     * 全局构造配置类
+     *
+     * @return
+     * */
+    private static GlobalConfig buildGlobalConfig() {
         // 全局配置
         GlobalConfig gc = new GlobalConfig();
         //项目所在地址
@@ -79,18 +101,35 @@ public class MpGenerator {
         gc.setServiceName("%sService");
         gc.setServiceImplName("%sServiceImpl");
         gc.setControllerName("%sController");
-        mpg.setGlobalConfig(gc);
+        return gc;
+    }
 
-        // 数据源配置
+    /**
+     * 数据库配置信息
+     *
+     * @return
+     * */
+    private static DataSourceConfig buildDataSourceConfig() {
         DataSourceConfig dsc = new DataSourceConfig();
         dsc.setUrl(URL);
         // dsc.setSchemaName("public");
         dsc.setDriverName(DRIVER_NAME);
         dsc.setUsername(USERNAME);
         dsc.setPassword(PASSWORD);
-        mpg.setDataSource(dsc);
+        dsc.setTypeConvert(new MySqlTypeConvert() {
+            @Override
+            public DbColumnType processTypeConvert(GlobalConfig globalConfig, String fieldType) {
+                //将数据库中timestamp转换成date
+                if ( fieldType.toLowerCase().contains( "timestamp" ) ) {
+                    return DbColumnType.DATE;
+                }
+                return (DbColumnType) super.processTypeConvert(globalConfig, fieldType);
+            }
+        });
+        return dsc;
+    }
 
-        // 包配置
+    private static PackageConfig buildPackageConfig() {
         PackageConfig pc = new PackageConfig();
         //pc.setModuleName(scanner("模块名"));
         pc.setParent(PACKAGE_NAME);
@@ -98,30 +137,17 @@ public class MpGenerator {
         pc.setXml("mapper");
         pc.setController("controller");
         pc.setService("service");
-        mpg.setPackageInfo(pc);
+        return pc;
+    }
 
-        // 自定义配置
-        InjectionConfig cfg = new InjectionConfig() {
-            @Override
-            public void initMap() {
-                // to do nothing
-            }
-        };
-        mpg.setCfg(cfg);
-
-        // 配置模板
-        TemplateConfig templateConfig = new TemplateConfig();
-
-        //不生成mapper xml文件
-        //templateConfig.setXml(null);
-        mpg.setTemplate(templateConfig);
-
-        // 策略配置
+    private static StrategyConfig buildStrategyConfig() {
         StrategyConfig strategy = new StrategyConfig();
         // 命名规则
         strategy.setNaming(NamingStrategy.underline_to_camel);
         strategy.setColumnNaming(NamingStrategy.underline_to_camel);
 
+        // 默认生成的po类不继承，手动修改继承
+        //strategy.setSuperEntityClass((String) null);
         // 实体是否使用Lombok插件
         strategy.setEntityLombokModel(false);
         // 自定义 service 父类
@@ -130,10 +156,6 @@ public class MpGenerator {
         strategy.setSuperServiceImplClass("com.h2t.study.BaseServiceImpl");
         // 控制层是否使用Rest风格
         strategy.setRestControllerStyle(true);
-
-        mpg.setStrategy(strategy);
-        mpg.setTemplateEngine(new FreemarkerTemplateEngine());
-        mpg.execute();
+        return strategy;
     }
-
 }
